@@ -2,7 +2,7 @@ bl_info = {
     "name":         "LAMMPS",
     "author":       "6r1d",
     "blender":      (2,6,7),
-    "version":      (0,0,1),
+    "version":      (0,0,11),
     "location":     "File > Import-Export",
     "description":  "Import LAMMPS data format",
     "category":     "Import-Export"
@@ -57,6 +57,7 @@ class ImportLammps(Operator, ImportHelper):
         
         add_sphere(0,0,0)
         self.sphere = bpy.context.object
+        self.sphere.name = 'lammps_import_root_object'
         
         with open(self.filepath, 'r') as file_object:
             stacks = {}
@@ -88,14 +89,25 @@ class ImportLammps(Operator, ImportHelper):
         # Switch off selected object outline
         #bpy.data.screens["Default"].(null) = False
 
-        print(materials.keys())
-
+        # Simulation atoms must have name prefix
+        name_prefix = str(random.randint(10000,99999))
+        
         for row, meta in zip(stacks["ATOMS"], stacks["ATOMS_metadata"]):
             ob = self.sphere.copy()
+            ob.name = 'atom' + '_' + name_prefix
             ob.data = self.sphere.data.copy()
             ob.location = (row[0], row[1], row[2])
             bpy.context.scene.objects.link(ob)
             setMaterial(ob, materials[str(meta[1])])
+            
+        # Delete root sphere
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_pattern(pattern='lammps_import_root_object', case_sensitive=False, extend=False)
+        bpy.ops.object.delete()
+        
+        # Select imported atoms
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_pattern(pattern='atom' + '_' + name_prefix + '*', case_sensitive=False, extend=True)
         
         bpy.context.scene.update()
         
